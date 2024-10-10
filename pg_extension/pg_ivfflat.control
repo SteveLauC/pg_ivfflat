@@ -1,0 +1,6 @@
+comment = 'pg_ivfflat:  Created by pgrx'
+default_version = '@CARGO_VERSION@'
+module_pathname = '$libdir/pg_ivfflat'
+relocatable = false
+superuser = true
+trusted = false
