@@ -1,3 +1,5 @@
+mod vector_type;
+
 use pgrx::prelude::*;
 
 ::pgrx::pg_module_magic!();
@@ -16,7 +18,6 @@ mod tests {
     fn test_hello_pg_ivfflat() {
         assert_eq!("Hello, pg_ivfflat", crate::hello_pg_ivfflat());
     }
-
 }
 
 /// This module is required by `cargo pgrx test` invocations.
