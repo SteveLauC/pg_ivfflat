@@ -34,8 +34,6 @@ jobs:
           cargo install --locked cargo-pgrx
           cargo pgrx init --pg17 download
 
-      - name: change directory
-
       - name: clippy
         run: cargo clippy
 
