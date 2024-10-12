@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read 
+
+jobs:
+  pg_extension:
+    name: pg_extension-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./pg_extension
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+          - os: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: set up Rust
+        run: rustup toolchain install stable --profile default --component clippy
+
+      - name: set up pgrx dependencies (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt install libclang-dev
+          sudo apt-get install build-essential libreadline-dev zlib1g-dev flex bison libxml2-dev libxslt-dev libssl-dev libxml2-utils xsltproc ccache pkg-config
+
+      - name: set up pgrx (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          cargo install --locked cargo-pgrx
+          cargo pgrx init --pg17 download
+
+      - name: Set up Homebrew (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: set up pgrx dependencies (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: brew install git icu4c pkg-config
+
+      - name: set up pgrx (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          cargo install --locked cargo-pgrx
+          PKG_CONFIG_PATH=/opt/homebrew/opt/icu4c/lib/pkgconfig cargo pgrx init --pg17 download
+
+      - name: clippy
+        run: cargo clippy
+
+      - name: test
+        # Use `cargo pgrx test` if this could have any issues, but for now, looks
+        # like it simply works.
+        run: cargo test 
+
+  ivfflat:
+    name: ivfflat-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./ivfflat
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+          - os: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: set up Rust
+        run: rustup toolchain install stable --profile default --component clippy
+
+      - name: clippy
+        run: cargo clippy
+
+      - name: test
+        run: cargo test 
