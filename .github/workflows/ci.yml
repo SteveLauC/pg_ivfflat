@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read 
+
+jobs:
+  pg_extension-${{ matrix.os }}:
+    runs-on: ${{ matrix.os }}
+    matrix:
+        include:
+          - os: macos-latest
+          - os: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: set up Rust
+        run: rustup toolchain install stable --profile default --component clippy
+      
+      - name: set up pgrx
+        run: |
+          cargo install --locked cargo-pgrx
+          cargo pgrx init --pg17 download
+
+      - name: clippy
+        run: cargo clippy
+
+      - name: test
+        # Use `cargo pgrx test` if this could have any issues, but for now, looks
+        # like it simply works.
+        run: cargo test 
+
+  ivfflat-${{ matrix.os }}:
+    runs-on: ${{ matrix.os }}
+    matrix:
+        include:
+          - os: macos-latest
+          - os: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: set up Rust
+        run: rustup toolchain install stable --profile default --component clippy
+
+      - name: clippy
+        run: cargo clippy
+
+      - name: test
+        run: cargo test 
