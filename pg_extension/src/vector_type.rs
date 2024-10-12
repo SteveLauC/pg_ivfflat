@@ -21,8 +21,8 @@ use std::ffi::CString;
 /// The `vector` type
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(transparent)]
-struct Vector {
-    value: Vec<f64>,
+pub(crate) struct Vector {
+    pub(crate) value: Vec<f64>,
 }
 
 unsafe impl SqlTranslatable for Vector {

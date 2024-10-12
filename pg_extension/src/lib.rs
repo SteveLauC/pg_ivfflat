@@ -1,3 +1,4 @@
+mod operator;
 mod vector_type;
 
 ::pgrx::pg_module_magic!();
