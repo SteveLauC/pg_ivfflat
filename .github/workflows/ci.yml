@@ -11,7 +11,8 @@ permissions:
   contents: read 
 
 jobs:
-  pg_extension-${{ matrix.os }}:
+  pg_extension:
+    name: pg_extension-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     matrix:
         include:
@@ -37,7 +38,8 @@ jobs:
         # like it simply works.
         run: cargo test 
 
-  ivfflat-${{ matrix.os }}:
+  ivfflat:
+    name: ivfflat-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     matrix:
         include:
