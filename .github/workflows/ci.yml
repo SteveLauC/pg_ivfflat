@@ -14,6 +14,9 @@ jobs:
   pg_extension:
     name: pg_extension-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./pg_extension
     strategy:
       matrix:
         include:
@@ -31,6 +34,8 @@ jobs:
           cargo install --locked cargo-pgrx
           cargo pgrx init --pg17 download
 
+      - name: change directory
+
       - name: clippy
         run: cargo clippy
 
@@ -42,6 +47,9 @@ jobs:
   ivfflat:
     name: ivfflat-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./ivfflat
     strategy:
       matrix:
         include:
