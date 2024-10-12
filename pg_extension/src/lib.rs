@@ -1,24 +1,6 @@
 mod vector_type;
 
-use pgrx::prelude::*;
-
 ::pgrx::pg_module_magic!();
-
-#[pg_extern]
-fn hello_pg_ivfflat() -> &'static str {
-    "Hello, pg_ivfflat"
-}
-
-#[cfg(any(test, feature = "pg_test"))]
-#[pg_schema]
-mod tests {
-    use pgrx::prelude::*;
-
-    #[pg_test]
-    fn test_hello_pg_ivfflat() {
-        assert_eq!("Hello, pg_ivfflat", crate::hello_pg_ivfflat());
-    }
-}
 
 /// This module is required by `cargo pgrx test` invocations.
 /// It must be visible at the root of your extension crate.
@@ -32,5 +14,19 @@ pub mod pg_test {
     pub fn postgresql_conf_options() -> Vec<&'static str> {
         // return any postgresql.conf settings that are required for your tests
         vec![]
+    }
+}
+
+#[cfg(any(test, feature = "pg_test"))]
+#[pgrx::pg_schema]
+mod tests {
+    use pgrx::pg_test;
+    use pgrx::Spi;
+
+    #[pg_test]
+    fn extension_exists() {
+        Spi::get_one::<bool>("SELECT count(*) = 1 FROM pg_extension WHERE extname = 'pg_ivfflat'")
+            .unwrap()
+            .unwrap();
     }
 }
