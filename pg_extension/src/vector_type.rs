@@ -192,3 +192,42 @@ CREATE TYPE vector (
         vector_modifier_output
     ], // so that we won't be created until the shell type and input and output functions have
 );
+
+#[cfg(any(test, feature = "pg_test"))]
+#[pgrx::pg_schema]
+mod tests {
+    use super::*;
+    use pgrx::pg_test;
+    use pgrx::Spi;
+
+    #[pg_test]
+    fn type_exists() {
+        Spi::get_one::<bool>("SELECT count(*) = 1 FROM pg_type WHERE typname = 'vector'")
+            .unwrap()
+            .unwrap();
+    }
+
+    #[pg_test]
+    fn test_input() {
+        let vector = Spi::get_one::<Vector>("SELECT '[1, 2]'::vector(2)")
+            .unwrap()
+            .unwrap();
+        assert_eq!(vector.value, [1.0, 2.0]);
+    }
+
+    #[pg_test]
+    #[should_panic]
+    fn test_input_mismatched_dimension() {
+        Spi::get_one::<Vector>("SELECT '[2]'::vector(2)")
+            .unwrap()
+            .unwrap();
+    }
+
+    #[pg_test]
+    fn test_output() {
+        let output = Spi::get_one::<String>("SELECT '[1, 2]'::vector(2)::text")
+            .unwrap()
+            .unwrap();
+        assert_eq!(output, "[1.0,2.0]");
+    }
+}
