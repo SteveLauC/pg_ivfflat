@@ -17,6 +17,15 @@ mod tests {
     use pgrx::Spi;
 
     #[pg_test]
+    fn operator_exits() {
+        let exists =
+            Spi::get_one::<bool>("select count(*) = 1 from pg_operator where oprname = '<=>'")
+                .unwrap()
+                .unwrap();
+        assert_eq!(exists, true);
+    }
+
+    #[pg_test]
     fn test_cosine_distance() {
         let distance =
             Spi::get_one::<f64>("select '[1, 2, 3]'::vector(3) <=> '[1, 2, 3]'::vector(3)")
