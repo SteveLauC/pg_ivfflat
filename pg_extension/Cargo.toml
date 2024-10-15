@@ -17,9 +17,9 @@ pg_test = []
 
 [dependencies]
 acap = "0.3.0"
-pgrx = "=0.12.5"
+pgrx = "0.12.6"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 
 [dev-dependencies]
-pgrx-tests = "=0.12.5"
+pgrx-tests = "0.12.6"
