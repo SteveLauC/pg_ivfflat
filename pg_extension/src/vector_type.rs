@@ -93,7 +93,7 @@ CREATE TYPE vector; -- shell type
     bootstrap // declare this extension_sql block as the "bootstrap" block so that it happens first in sql generation
 );
 
-#[pg_extern(immutable, parallel_safe, requires = [ "shell_type" ])]
+#[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
 fn vector_input(
     input: &CStr,
     _oid: pg_sys::Oid,
@@ -117,7 +117,7 @@ fn vector_input(
     Ok(Vector { value })
 }
 
-#[pg_extern(immutable, parallel_safe, requires = [ "shell_type" ])]
+#[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
 fn vector_output(value: Vector) -> &'static CStr {
     let mut s = StringInfo::new();
     let value_serialized_string = serde_json::to_string(&value).unwrap();
@@ -126,7 +126,7 @@ fn vector_output(value: Vector) -> &'static CStr {
     unsafe { s.leak_cstr() }
 }
 
-#[pgrx::pg_extern(immutable, parallel_safe)]
+#[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
 fn vector_modifier_input(list: pgrx::datum::Array<&CStr>) -> i32 {
     if list.len() != 1 {
         pgrx::error!("pg_ivfflat: too many modifiers, expect 1")
@@ -140,15 +140,37 @@ fn vector_modifier_input(list: pgrx::datum::Array<&CStr>) -> i32 {
     dimension as i32
 }
 
-#[pgrx::pg_extern(immutable, strict, parallel_safe)]
+#[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
 fn vector_modifier_output(type_modifer: i32) -> CString {
     CString::new(format!("({})", type_modifer)).unwrap()
 }
 
+// create the actual type, specifying the input and output functions
+extension_sql!(
+    r#"
+CREATE TYPE vector (
+    INPUT = vector_input,
+    OUTPUT = vector_output,
+    TYPMOD_IN = vector_modifier_input,
+    TYPMOD_OUT = vector_modifier_output,
+    STORAGE = external 
+);
+"#,
+    name = "concrete_type",
+    creates = [Type(Vector)],
+    requires = [
+        "shell_type",
+        vector_input,
+        vector_output,
+        vector_modifier_input,
+        vector_modifier_output
+    ]
+);
+
 /// Cast a `vector` to a `vector`, the conversion is meaningless, but we do need
 /// to do the dimension check here if we cannot get the `typmod` value in vector
 /// type's input function.
-#[pgrx::pg_extern(immutable, strict, parallel_safe)]
+#[pgrx::pg_extern(immutable, strict, parallel_safe, requires = ["concrete_type"])]
 fn cast_vector_to_vector(vector: Vector, type_modifier: i32, _explicit: bool) -> Vector {
     let expected_dimension = u16::try_from(type_modifier).expect("invalid type_modifier") as usize;
     let dimension = vector.value.len();
@@ -169,28 +191,7 @@ extension_sql!(
     WITH FUNCTION cast_vector_to_vector(vector, integer, boolean);
     "#,
     name = "cast_vector_to_vector",
-    requires = ["shell_type", "concrete_type", cast_vector_to_vector]
-);
-
-// create the actual type, specifying the input and output functions
-extension_sql!(
-    r#"
-CREATE TYPE vector (
-    INPUT = vector_input,
-    OUTPUT = vector_output,
-    TYPMOD_IN = vector_modifier_input,
-    TYPMOD_OUT = vector_modifier_output
-);
-"#,
-    name = "concrete_type",
-    creates = [Type(Vector)],
-    requires = [
-        "shell_type",
-        vector_input,
-        vector_output,
-        vector_modifier_input,
-        vector_modifier_output
-    ], // so that we won't be created until the shell type and input and output functions have
+    requires = ["concrete_type", cast_vector_to_vector]
 );
 
 #[cfg(any(test, feature = "pg_test"))]
