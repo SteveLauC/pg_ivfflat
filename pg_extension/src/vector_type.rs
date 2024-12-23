@@ -44,22 +44,14 @@ impl FromDatum for Vector {
     where
         Self: Sized,
     {
-        if is_null {
-            None
-        } else {
-            let serialized_str =
-                <String as FromDatum>::from_polymorphic_datum(datum, is_null, typoid)
-                    .expect("should be Some as is not null");
-            let vector = serde_json::from_str(&serialized_str).expect("corrupted serialized str");
-            Some(vector)
-        }
+        let value = <Vec<f64> as FromDatum>::from_polymorphic_datum(datum, is_null, typoid)?;
+        Some(Self { value })
     }
 }
 
 impl IntoDatum for Vector {
     fn into_datum(self) -> Option<pg_sys::Datum> {
-        let serialized_str = serde_json::to_string(&self).unwrap();
-        <String as IntoDatum>::into_datum(serialized_str)
+        self.value.into_datum()
     }
 
     fn type_oid() -> pg_sys::Oid {
