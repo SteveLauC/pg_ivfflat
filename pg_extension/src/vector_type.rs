@@ -12,9 +12,7 @@ use pgrx::pgrx_sql_entity_graph::metadata::Returns;
 use pgrx::pgrx_sql_entity_graph::metadata::ReturnsError;
 use pgrx::pgrx_sql_entity_graph::metadata::SqlMapping;
 use pgrx::pgrx_sql_entity_graph::metadata::SqlTranslatable;
-use pgrx::stringinfo::StringInfo;
 use pgrx::wrappers::rust_regtypein;
-use std::error::Error;
 use std::ffi::CStr;
 use std::ffi::CString;
 
@@ -113,12 +111,9 @@ fn vector_input(input: &CStr, _oid: pg_sys::Oid, type_modifier: i32) -> Vector {
 }
 
 #[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
-fn vector_output(value: Vector) -> &'static CStr {
-    let mut s = StringInfo::new();
+fn vector_output(value: Vector) -> CString {
     let value_serialized_string = serde_json::to_string(&value).unwrap();
-    s.push_str(&value_serialized_string);
-    // SAFETY: We just constructed this StringInfo ourselves
-    unsafe { s.leak_cstr() }
+    CString::new(value_serialized_string).expect("there should be no NUL in the middle")
 }
 
 #[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
