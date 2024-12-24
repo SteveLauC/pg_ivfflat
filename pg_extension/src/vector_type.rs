@@ -86,12 +86,15 @@ CREATE TYPE vector; -- shell type
 );
 
 #[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
-fn vector_input(
-    input: &CStr,
-    _oid: pg_sys::Oid,
-    type_modifier: i32,
-) -> Result<Vector, Box<dyn Error>> {
-    let value = serde_json::from_str::<Vec<f64>>(input.to_str()?)?;
+fn vector_input(input: &CStr, _oid: pg_sys::Oid, type_modifier: i32) -> Vector {
+    let value = match serde_json::from_str::<Vec<f64>>(
+        input.to_str().expect("expect input to be UTF-8 encoded"),
+    ) {
+        Ok(v) => v,
+        Err(e) => {
+            pgrx::error!("failed to deserialize the input string due to error {}", e)
+        }
+    };
     let dimension = value.len();
 
     // check the dimension in INPUT function if we know the expected dimension.
@@ -99,14 +102,14 @@ fn vector_input(
         let expected_dimension = type_modifier as usize;
         if dimension != expected_dimension {
             pgrx::error!(
-                "pg_ivfflat: mismatched dimension, expected {}, found {}",
+                "mismatched dimension, expected {}, found {}",
                 expected_dimension,
                 dimension
             );
         }
     }
 
-    Ok(Vector { value })
+    Vector { value }
 }
 
 #[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
@@ -121,12 +124,12 @@ fn vector_output(value: Vector) -> &'static CStr {
 #[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
 fn vector_modifier_input(list: pgrx::datum::Array<&CStr>) -> i32 {
     if list.len() != 1 {
-        pgrx::error!("pg_ivfflat: too many modifiers, expect 1")
+        pgrx::error!("too many modifiers, expect 1")
     }
 
     let modifier = list.get(0).unwrap().unwrap();
     let Ok(dimension) = modifier.to_str().unwrap().parse::<u16>() else {
-        pgrx::error!("pg_ivfflat: too many dimensions, expect [1, 65535]")
+        pgrx::error!("too many dimensions, expect [1, 65535]")
     };
 
     dimension as i32
@@ -168,7 +171,7 @@ fn cast_vector_to_vector(vector: Vector, type_modifier: i32, _explicit: bool) ->
     let dimension = vector.value.len();
     if vector.value.len() != expected_dimension {
         pgrx::error!(
-            "pg_ivfflat: mismatched dimension, expected {}, found {}",
+            "mismatched dimension, expected {}, found {}",
             type_modifier,
             dimension
         );
