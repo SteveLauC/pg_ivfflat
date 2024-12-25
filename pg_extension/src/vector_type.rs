@@ -62,7 +62,10 @@ where
     Self: 'fcx,
 {
     unsafe fn unbox_arg_unchecked(arg: ::pgrx::callconv::Arg<'_, 'fcx>) -> Self {
-        unsafe { arg.unbox_arg_using_from_datum().unwrap() }
+        unsafe {
+            arg.unbox_arg_using_from_datum()
+                .expect("expect it to be non-NULL")
+        }
     }
 }
 
@@ -71,7 +74,10 @@ unsafe impl BoxRet for Vector {
         self,
         fcinfo: &mut pgrx::callconv::FcInfo<'fcx>,
     ) -> pgrx::datum::Datum<'fcx> {
-        unsafe { fcinfo.return_raw_datum(self.into_datum().expect("should be Some?")) }
+        match self.into_datum() {
+            Some(datum) => unsafe { fcinfo.return_raw_datum(datum) },
+            None => fcinfo.return_null(),
+        }
     }
 }
 
@@ -93,11 +99,22 @@ fn vector_input(input: &CStr, _oid: pg_sys::Oid, type_modifier: i32) -> Vector {
             pgrx::error!("failed to deserialize the input string due to error {}", e)
         }
     };
-    let dimension = value.len();
+    let dimension = match u16::try_from(value.len()) {
+        Ok(d) => d,
+        Err(_) => {
+            pgrx::error!("this vector's dimension [{}] is too large", value.len());
+        }
+    };
 
     // check the dimension in INPUT function if we know the expected dimension.
     if type_modifier != -1 {
-        let expected_dimension = type_modifier as usize;
+        let expected_dimension = match u16::try_from(type_modifier) {
+            Ok(d) => d,
+            Err(_) => {
+                panic!("failed to cast stored dimension [{}] to u16", type_modifier);
+            }
+        };
+
         if dimension != expected_dimension {
             pgrx::error!(
                 "mismatched dimension, expected {}, found {}",
@@ -106,6 +123,7 @@ fn vector_input(input: &CStr, _oid: pg_sys::Oid, type_modifier: i32) -> Vector {
             );
         }
     }
+    // If we don't know the type modifier, do not check the dimension.
 
     Vector { value }
 }
