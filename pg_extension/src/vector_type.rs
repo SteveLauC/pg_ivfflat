@@ -122,17 +122,24 @@ fn vector_modifier_input(list: pgrx::datum::Array<&CStr>) -> i32 {
         pgrx::error!("too many modifiers, expect 1")
     }
 
-    let modifier = list.get(0).unwrap().unwrap();
-    let Ok(dimension) = modifier.to_str().unwrap().parse::<u16>() else {
-        pgrx::error!("too many dimensions, expect [1, 65535]")
+    let modifier = list
+        .get(0)
+        .expect("should be Some as len = 1")
+        .expect("type modifier cannot be NULL");
+    let Ok(dimension) = modifier
+        .to_str()
+        .expect("expect type modifiers to be UTF-8 encoded")
+        .parse::<u16>()
+    else {
+        pgrx::error!("invalid dimension value, expect a number in range [1, 65535]")
     };
 
     dimension as i32
 }
 
 #[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
-fn vector_modifier_output(type_modifer: i32) -> CString {
-    CString::new(format!("({})", type_modifer)).unwrap()
+fn vector_modifier_output(type_modifier: i32) -> CString {
+    CString::new(format!("({})", type_modifier)).expect("no NUL in the middle")
 }
 
 // create the actual type, specifying the input and output functions
