@@ -138,8 +138,8 @@ fn vector_modifier_input(list: pgrx::datum::Array<&CStr>) -> i32 {
 }
 
 #[pg_extern(immutable, strict, parallel_safe, requires = [ "shell_type" ])]
-fn vector_modifier_output(type_modifer: i32) -> CString {
-    CString::new(format!("({})", type_modifer)).expect("no NUL in the middle")
+fn vector_modifier_output(type_modifier: i32) -> CString {
+    CString::new(format!("({})", type_modifier)).expect("no NUL in the middle")
 }
 
 // create the actual type, specifying the input and output functions
